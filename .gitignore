@@ -1,3 +1,11 @@
+
+*.tws
+.DS_Store
+.quarto
+
+# R gitignore template from https://github.com/github/gitignore/blob/master/R.gitignore
+# And added *.Rproj and .Rbuildignore
+
 # History files
 .Rhistory
 .Rapp.history
@@ -20,6 +28,7 @@
 
 # RStudio files
 .Rproj.user/
+*.Rproj
 
 # produced vignettes
 vignettes/*.html
@@ -47,3 +56,4 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
