@@ -1,7 +1,10 @@
 
 library(shiny)
+library(data.table)
+library(ggplot2)
+# library(thematic)
 
-
+# thematic::thematic_shiny()
 
 con <- DBI::dbConnect(RSQLite::SQLite(), "data/xmr-stressnet-diagnostics.db")
 DBI::dbExecute(con, "PRAGMA journal_mode=WAL;")
@@ -25,9 +28,36 @@ read.stressnet <- function(file = NULL) {
 # system.time(read.stressnet())
 
 
-stressnet.db_fn <- shiny::reactiveFileReader(60000, NULL,
+stressnet.db_fn <- shiny::reactiveFileReader(10 * 60000, NULL,
   filePath = paste0("data/xmr-stressnet-diagnostics.db-wal"), readFunc = read.stressnet)
-# Poll every 1 minutes
+# Poll every 10 minutes
+
+
+bs.colors <- bslib::bs_get_variables(bslib::bs_theme(preset = "vapor"),
+  c("blue", "indigo", "purple", "pink", "red", "orange", "yellow", "green",
+    "teal", "cyan", "light", "dark", "body-bg", "white", "font-family-sans-serif", "text-muted",
+    "gray-800", "gray-500"))
+
+
+plot.style <- function(x, title) {
+  x |>
+  plotly::layout(
+    title = list(text = title), # , font = list( family = "Courier New", size = 14, color = bs.colors["white"])
+    font = list(color = bs.colors["light"]),
+    margin = list(t = 100, l = 0, r = 0),
+    xaxis = list(title = '',
+      zerolinecolor = '#ffff',
+      zerolinewidth = 2,
+      gridcolor = 'ffff'),
+    yaxis = list(title = '',
+      zerolinecolor = '#ffff',
+      zerolinewidth = 2,
+      gridcolor = 'ffff'),
+    plot_bgcolor = bs.colors["dark"], hovermode = 'x', paper_bgcolor = bs.colors["dark"],
+    legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
+  plotly::config(displayModeBar = FALSE)
+}
+
 
 
 
@@ -51,25 +81,11 @@ server <- function(input, output) {
       data <- stressnet.db$pool_stats
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~bytes_total, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "txpool bytes")
 
-      fig <- fig |>
-        plotly::layout(
-          title = list(text = "txpool bytes"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
       fig
 
     })
@@ -82,25 +98,53 @@ server <- function(input, output) {
       data <- stressnet.db$pool_stats
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~txs_total, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "txpool number of txs")
 
-      fig <- fig |>
-        plotly::layout(
-          title = list(text = "txpool number of txs"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
+      fig
+
+    })
+
+    output$line_chart2_2 <- plotly::renderPlotly({
+
+      data <- stressnet.db$info
+
+      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight_limit, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "block_weight_limit")
+
+      fig
+
+    })
+
+    output$line_chart2_3 <- plotly::renderPlotly({
+
+      data <- stressnet.db$info
+
+      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight_median, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "block_weight_median")
+
+      fig
+
+    })
+
+    output$line_chart2_4 <- plotly::renderPlotly({
+
+      data <- stressnet.db$info
+
+      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~database_size, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "database_size")
+
       fig
 
     })
@@ -112,25 +156,11 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~outgoing_connections_count, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "Number of outgoing connections")
 
-      fig <- fig |>
-        plotly::layout(
-          title = list(text = "Number of outgoing connections"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
       fig
 
     })
@@ -142,25 +172,11 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~incoming_connections_count, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "Number of incoming connections")
 
-      fig <- fig |>
-        plotly::layout(
-          title = list(text = "Number of incoming connections"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
       fig
 
     })
@@ -174,25 +190,15 @@ server <- function(input, output) {
       data$cpu_time_user <- c(NA, diff(data$cpu_time_user) / as.numeric(diff(data$time)))
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~cpu_time_user, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "monerod's CPU load (user mode)")
 
       fig <- fig |>
-        plotly::layout(
-          title = list(text = "monerod's CPU load (user mode)"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
+        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time, y = ~frollmean(cpu_time_user, 30 * 2, align = "center"),
+          type = 'scatter', mode = 'lines',  fill = '', line = list(color = bs.colors["blue"], width = 3))
+
       fig
 
     })
@@ -206,25 +212,15 @@ server <- function(input, output) {
       data$cpu_time_system <- c(NA, diff(data$cpu_time_system) / as.numeric(diff(data$time)))
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~cpu_time_system, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "monerod's CPU load (kernel mode)")
 
       fig <- fig |>
-        plotly::layout(
-          title = list(text = "monerod's CPU load (kernel mode)"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
+        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time, y = ~frollmean(cpu_time_system, 30 * 2, align = "center"),
+          type = 'scatter', mode = 'lines',  fill = '', line = list(color = bs.colors["blue"], width = 3))
+
       fig
 
     })
@@ -235,25 +231,11 @@ server <- function(input, output) {
       data <- stressnet.db$process_info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~mem_uss, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "monerod's RAM (Unique Set Size)")
 
-      fig <- fig |>
-        plotly::layout(
-          title = list(text = "monerod's RAM (Unique Set Size)"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
       fig
 
     })
@@ -264,30 +246,57 @@ server <- function(input, output) {
       data <- stressnet.db$process_info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~mem_swap, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', line = list(color = 'transparent', fillcolor = "#467c9e") ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
+      fig <- plot.style(fig, "monerod's RAM (Swap)")
 
-      fig <- fig |>
-        plotly::layout(
-          title = list(text = "monerod's RAM (Swap)"),
-          margin = list(t = 100, l = 0, r = 0),
-          xaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          yaxis = list(title = '',
-            zerolinecolor = '#ffff',
-            zerolinewidth = 2,
-            gridcolor = 'ffff'),
-          plot_bgcolor= '#f2f8ee', hovermode = 'x', paper_bgcolor = '#f2f8ee',
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = 1.1)) |>
-        plotly::config(displayModeBar = FALSE)
       fig
 
     })
 
 
+
+
+    output$corr_plot <- shiny::renderPlot({
+
+      corr.data <- data.table::merge.data.table(stressnet.db$pool_stats, stressnet.db$process_info, by = "time")
+
+      data.table::setDT(corr.data)
+
+      corr.data <- cor(corr.data[, .(txpool_bytes = bytes_total, diff_txpool_bytes = diff(bytes_total),
+        cpu_time_user, diff_mem_uss = diff(mem_uss))], use = "pairwise.complete.obs")
+
+
+
+      ggcorrplot::ggcorrplot(corr.data,
+      type = "upper", lab = TRUE, lab_size = 8,
+        title = "Correlation",
+      colors = c(bs.colors[["pink"]], bs.colors[["gray-500"]], bs.colors[["green"]]),
+      legend.title = "Correlation",
+        ggtheme = ggplot2::theme(
+          title = element_text(color = bs.colors["cyan"]),
+          plot.background = element_rect(fill = bs.colors["dark"], colour = bs.colors["dark"]),
+          panel.background = element_rect(fill = bs.colors["dark"], colour = bs.colors["dark"])
+        )
+        ) + # ggplot2::theme() ggplot2::theme(bslib::bs_theme(preset = "vapor"))
+      scale_x_discrete(position = "top") +
+        theme(axis.text.x = element_text(size = 20, angle = 25, hjust = 0, color = bs.colors["cyan"]),
+          axis.text.y = element_text(size = 20, color = bs.colors["cyan"]),
+          plot.title = element_text(size = 40, color = bs.colors["cyan"]),
+          plot.subtitle = element_text(size = 20, color = bs.colors["cyan"]),
+          legend.title = element_text(size = 20, color = bs.colors["cyan"]),
+          legend.text = element_text(size = 20, color = bs.colors["cyan"]),
+          legend.key.size = unit(30, "pt"),
+          legend.background = element_rect(fill = bs.colors["dark"]),
+          plot.margin = margin(t = 0, r = 0, b = 75, l = 0, unit = "pt"),
+          plot.background = element_rect(color = NA))
+
+
+
+    }, height = 718, width = 800)
+    # Height is strange because there is are white bars on top/bottom
+    # or left/right otherwise
 
 
 
