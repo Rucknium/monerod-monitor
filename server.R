@@ -38,6 +38,8 @@ bs.colors <- bslib::bs_get_variables(bslib::bs_theme(preset = "vapor"),
     "teal", "cyan", "light", "dark", "body-bg", "white", "font-family-sans-serif", "text-muted",
     "gray-800", "gray-500"))
 
+is.pruned <- TRUE
+# TODO: Make this not hard-coded
 
 plot.style <- function(x, title) {
   x |>
@@ -75,13 +77,34 @@ server <- function(input, output) {
 
 
 
+    topline_data <- stressnet.db$info[nrow(stressnet.db$info), , drop = FALSE]
+
+    output$topline_text1 <- renderText({
+      paste0("Data last updated: ", round(topline_data$time), " UTC")
+    })
+
+    output$topline_text2 <- renderText({
+      paste0("Current node height: ", as.integer(topline_data$height))
+    })
+
+    output$topline_text3 <- renderText({
+      paste0("Top block hash: ", topline_data$top_block_hash)
+    })
+
+    output$topline_text4 <- renderText({
+      paste0("Last node restart time: ",
+        as.POSIXct(as.numeric(topline_data$start_time), origin = "1970-01-01"), " UTC"
+      )
+    })
+
 
     output$line_chart1 <- plotly::renderPlotly({
 
       data <- stressnet.db$pool_stats
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~bytes_total, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "txpool bytes")
@@ -98,7 +121,8 @@ server <- function(input, output) {
       data <- stressnet.db$pool_stats
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~txs_total, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "txpool number of txs")
@@ -112,7 +136,8 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight_limit, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "block_weight_limit")
@@ -126,7 +151,8 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight_median, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "block_weight_median")
@@ -140,10 +166,11 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~database_size, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
-      fig <- plot.style(fig, "database_size")
+      fig <- plot.style(fig, paste0("Blockchain size", ifelse(is.pruned, " (pruned)", " (unpruned")) )
 
       fig
 
@@ -156,7 +183,8 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~outgoing_connections_count, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "Number of outgoing connections")
@@ -172,7 +200,8 @@ server <- function(input, output) {
       data <- stressnet.db$info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~incoming_connections_count, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "Number of incoming connections")
@@ -190,7 +219,8 @@ server <- function(input, output) {
       data$cpu_time_user <- c(NA, diff(data$cpu_time_user) / as.numeric(diff(data$time)))
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~cpu_time_user, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "monerod's CPU load (user mode)")
@@ -212,7 +242,8 @@ server <- function(input, output) {
       data$cpu_time_system <- c(NA, diff(data$cpu_time_system) / as.numeric(diff(data$time)))
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~cpu_time_system, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "monerod's CPU load (kernel mode)")
@@ -231,7 +262,8 @@ server <- function(input, output) {
       data <- stressnet.db$process_info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~mem_uss, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "monerod's RAM (Unique Set Size)")
@@ -246,7 +278,8 @@ server <- function(input, output) {
       data <- stressnet.db$process_info
 
       fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~mem_swap, type = 'scatter',
-        mode = 'lines', fill = 'tozeroy', fillcolor = bs.colors["pink"], line = list(color = 'transparent') ) |>
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
       fig <- plot.style(fig, "monerod's RAM (Swap)")
