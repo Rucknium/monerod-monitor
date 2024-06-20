@@ -138,6 +138,17 @@ while (TRUE) {
     info <- get.info()
 
 
+    get.last_block_header <- function() {
+
+      last_block_header <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_last_block_header")$result
+
+      cbind(time = poll.time, as.data.frame(last_block_header$block_header))
+
+    }
+
+    last_block_header <- get.last_block_header()
+
+
     get.fee_estimate <- function() {
 
       fee_estimate <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_fee_estimate")$result
@@ -182,6 +193,7 @@ while (TRUE) {
     }
 
     connections <- get.connnnections()
+
 
 
 
@@ -262,6 +274,11 @@ while (TRUE) {
       "INSERT INTO info VALUES (:time,:adjusted_time,:alt_blocks_count,:block_size_limit,:block_size_median,:block_weight_limit,:block_weight_median,:bootstrap_daemon_address,:busy_syncing,:credits,:cumulative_difficulty,:cumulative_difficulty_top64,:database_size,:difficulty,:difficulty_top64,:free_space,:grey_peerlist_size,:height,:height_without_bootstrap,:incoming_connections_count,:mainnet,:nettype,:offline,:outgoing_connections_count,:restricted,:rpc_connections_count,:stagenet,:start_time,:status,:synchronized,:target,:target_height,:testnet,:top_block_hash,:top_hash,:tx_count,:tx_pool_size,:untrusted,:update_available,:version,:was_bootstrap_ever_used,:white_peerlist_size,:wide_cumulative_difficulty,:wide_difficulty)")
     DBI::dbBind(info.statement, params = info)
     DBI::dbClearResult(info.statement)
+
+    last_block_header.statement <- DBI::dbSendQuery(con,
+      "INSERT INTO last_block_header VALUES (:time,:block_size,:block_weight,:cumulative_difficulty,:cumulative_difficulty_top64,:depth,:difficulty,:difficulty_top64,:hash,:height,:long_term_weight,:major_version,:miner_tx_hash,:minor_version,:nonce,:num_txes,:orphan_status,:pow_hash,:prev_hash,:reward,:timestamp,:wide_cumulative_difficulty,:wide_difficulty)")
+    DBI::dbBind(last_block_header.statement, params = last_block_header)
+    DBI::dbClearResult(last_block_header.statement)
 
 
     fee_estimate.statement <- DBI::dbSendQuery(con,

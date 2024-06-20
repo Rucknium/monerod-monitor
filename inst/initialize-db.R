@@ -79,6 +79,32 @@ wide_cumulative_difficulty REAL,
 wide_difficulty REAL
 )")
 
+DBI::dbExecute(con, "CREATE TABLE last_block_header (
+time TEXT,
+block_size REAL,
+block_weight REAL,
+cumulative_difficulty REAL,
+cumulative_difficulty_top64 REAL,
+depth REAL,
+difficulty REAL,
+difficulty_top64 REAL,
+hash TEXT,
+height REAL,
+long_term_weight REAL,
+major_version REAL,
+miner_tx_hash TEXT,
+minor_version REAL,
+nonce REAL,
+num_txes REAL,
+orphan_status REAL,
+pow_hash TEXT,
+prev_hash TEXT,
+reward REAL,
+timestamp REAL,
+wide_cumulative_difficulty TEXT,
+wide_difficulty TEXT
+)")
+
 
 
 DBI::dbExecute(con, "CREATE TABLE fee_estimate (
@@ -142,7 +168,6 @@ mem_uss REAL,
 mem_pss REAL,
 mem_swap REAL
 )")
-
 
 
 

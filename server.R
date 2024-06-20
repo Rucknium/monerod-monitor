@@ -18,6 +18,7 @@ read.stressnet <- function(file = NULL) {
     pool_stats = DBI::dbGetQuery(con, "SELECT * FROM pool_stats"),
     pool_stats_histo = DBI::dbGetQuery(con, "SELECT * FROM pool_stats_histo"),
     info = DBI::dbGetQuery(con, "SELECT * FROM info"),
+    last_block_header = DBI::dbGetQuery(con, "SELECT * FROM last_block_header"),
     fee_estimate = DBI::dbGetQuery(con, "SELECT * FROM fee_estimate"),
     connections = DBI::dbGetQuery(con, "SELECT * FROM connections"),
     process_info = DBI::dbGetQuery(con, "SELECT * FROM process_info")
@@ -131,6 +132,36 @@ server <- function(input, output) {
 
     })
 
+    output$line_chart2_1_1 <- plotly::renderPlotly({
+
+      data <- stressnet.db$last_block_header
+
+      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"])) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "Block weight")
+
+      fig
+
+    })
+
+    output$line_chart2_1_2 <- plotly::renderPlotly({
+
+      data <- stressnet.db$last_block_header
+
+      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~reward, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"])) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "Total block coinbase reward to miner")
+
+      fig
+
+    })
+
     output$line_chart2_2 <- plotly::renderPlotly({
 
       data <- stressnet.db$info
@@ -140,7 +171,7 @@ server <- function(input, output) {
         line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
-      fig <- plot.style(fig, "block_weight_limit")
+      fig <- plot.style(fig, "Block weight limit")
 
       fig
 
@@ -155,7 +186,7 @@ server <- function(input, output) {
         line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
-      fig <- plot.style(fig, "block_weight_median")
+      fig <- plot.style(fig, "Block weight median")
 
       fig
 
