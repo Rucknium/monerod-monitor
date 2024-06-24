@@ -23,6 +23,9 @@ oldest REAL,
 txs_total REAL
 )")
 
+DBI::dbExecute(con, "ALTER TABLE pool_stats ADD COLUMN rpc_response_time REAL")
+
+
 
 DBI::dbExecute(con, "CREATE TABLE pool_stats_histo (
 time TEXT,
@@ -146,6 +149,14 @@ send_count REAL,
 send_idle_time REAL,
 state TEXT,
 support_flags REAL
+)")
+
+
+DBI::dbExecute(con, "CREATE TABLE bans (
+time TEXT,
+host TEXT,
+ip REAL,
+seconds REAL
 )")
 
 

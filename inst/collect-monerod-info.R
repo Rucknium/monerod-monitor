@@ -100,7 +100,9 @@ while (TRUE) {
 
     get.pool_stats <- function() {
 
-      transaction_pool_stats <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool_stats"))
+      rpc.response.time <- system.time({
+        transaction_pool_stats <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool_stats"))
+      }, gcFirst = FALSE)[["elapsed"]]
 
       if (transaction_pool_stats$pool_stats[["bytes_total"]] != 0 &&
           !is.atomic(transaction_pool_stats$pool_stats)) {
@@ -119,7 +121,8 @@ while (TRUE) {
 
       transaction_pool_stats$pool_stats$histo <- NULL
 
-      list(pool_stats = cbind(time = poll.time, as.data.frame(transaction_pool_stats$pool_stats)),
+      list(pool_stats = cbind(time = poll.time, as.data.frame(transaction_pool_stats$pool_stats),
+            rpc_response_time = rpc.response.time),
         histo = histo)
 
     }
@@ -196,6 +199,27 @@ while (TRUE) {
 
 
 
+    get.bans <- function() {
+
+      bans <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_bans")$result
+
+      if (length(bans$bans) > 0) {
+
+        bans <- do.call(rbind, lapply(bans$bans, as.data.frame))
+
+      } else {
+        # If there are no bans, make a data frame with a missing row
+        bans <- data.frame(host = NA_character_,
+          ip = NA_real_, seconds = NA_real_)
+      }
+
+      cbind(time = poll.time, bans)
+
+    }
+
+    bans <- get.bans()
+
+
 
     get.process_info <- function() {
 
@@ -260,7 +284,7 @@ while (TRUE) {
 
 
     pool_stats.statement <- DBI::dbSendQuery(con,
-      "INSERT INTO pool_stats VALUES (:time,:bytes_max,:bytes_med,:bytes_min,:bytes_total,:fee_total,:histo_98pc,:num_10m,:num_double_spends,:num_failing,:num_not_relayed,:oldest,:txs_total)")
+      "INSERT INTO pool_stats VALUES (:time,:bytes_max,:bytes_med,:bytes_min,:bytes_total,:fee_total,:histo_98pc,:num_10m,:num_double_spends,:num_failing,:num_not_relayed,:oldest,:txs_total,:rpc_response_time)")
     DBI::dbBind(pool_stats.statement, params = pool_stats$pool_stats)
     DBI::dbClearResult(pool_stats.statement)
 
@@ -291,6 +315,18 @@ while (TRUE) {
       "INSERT INTO connections VALUES (:time,:address,:address_type,:avg_download,:avg_upload,:connection_id,:current_download,:current_upload,:height,:host,:incoming,:ip,:live_time,:local_ip,:localhost,:peer_id,:port,:pruning_seed,:recv_count,:recv_idle_time,:rpc_credits_per_hash,:rpc_port,:send_count,:send_idle_time,:state,:support_flags)")
     DBI::dbBind(connections.statement, params = connections)
     DBI::dbClearResult(connections.statement)
+
+
+    connections.statement <- DBI::dbSendQuery(con,
+      "INSERT INTO connections VALUES (:time,:address,:address_type,:avg_download,:avg_upload,:connection_id,:current_download,:current_upload,:height,:host,:incoming,:ip,:live_time,:local_ip,:localhost,:peer_id,:port,:pruning_seed,:recv_count,:recv_idle_time,:rpc_credits_per_hash,:rpc_port,:send_count,:send_idle_time,:state,:support_flags)")
+    DBI::dbBind(connections.statement, params = connections)
+    DBI::dbClearResult(connections.statement)
+
+
+    bans.statement <- DBI::dbSendQuery(con,
+      "INSERT INTO bans VALUES (:time,:host,:ip,:seconds)")
+    DBI::dbBind(bans.statement, params = bans)
+    DBI::dbClearResult(bans.statement)
 
 
     process_info.statement <- DBI::dbSendQuery(con,

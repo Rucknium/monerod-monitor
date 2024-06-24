@@ -21,6 +21,7 @@ read.stressnet <- function(file = NULL) {
     last_block_header = DBI::dbGetQuery(con, "SELECT * FROM last_block_header"),
     fee_estimate = DBI::dbGetQuery(con, "SELECT * FROM fee_estimate"),
     connections = DBI::dbGetQuery(con, "SELECT * FROM connections"),
+    bans = DBI::dbGetQuery(con, "SELECT * FROM bans"),
     process_info = DBI::dbGetQuery(con, "SELECT * FROM process_info")
   )
 
@@ -66,6 +67,10 @@ plot.style <- function(x, title) {
 
 server <- function(input, output) {
 
+  shiny::onStop(function() {DBI::dbDisconnect(con)}, session = NULL)
+  # "If NULL, it is the same as calling onStop outside of the server function,
+  # and the callback will be invoked when the application exits."
+
 
   shiny::observe({
 
@@ -103,7 +108,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$pool_stats
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~bytes_total, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~bytes_total, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -121,7 +126,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$pool_stats
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~txs_total, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~txs_total, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -136,7 +141,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$last_block_header
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~block_weight, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"])) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -151,7 +156,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$last_block_header
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~reward, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~reward, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"])) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -162,26 +167,11 @@ server <- function(input, output) {
 
     })
 
-    output$line_chart2_2 <- plotly::renderPlotly({
-
-      data <- stressnet.db$info
-
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight_limit, type = 'scatter',
-        mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
-        line = list(color = bs.colors["pink"], width = 5)) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
-
-      fig <- plot.style(fig, "Block weight limit")
-
-      fig
-
-    })
-
     output$line_chart2_3 <- plotly::renderPlotly({
 
       data <- stressnet.db$info
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~block_weight_median, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~block_weight_median, type = 'scatter',
         mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -196,7 +186,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$info
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~database_size, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~database_size, type = 'scatter',
         mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"], width = 5)) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -213,7 +203,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$info
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~outgoing_connections_count, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~outgoing_connections_count, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -230,7 +220,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$info
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~incoming_connections_count, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~incoming_connections_count, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -243,13 +233,49 @@ server <- function(input, output) {
 
 
 
+
+    output$line_chart4_1 <- plotly::renderPlotly({
+
+      data <- stressnet.db$bans
+
+      data$time <- factor(data$time)
+
+      data <- data[complete.cases(data), , drop = FALSE]
+      # Remove empty rows that have no bans, but keep the factor levels
+
+      data <- as.data.frame(table(data[, "time", drop = FALSE]))
+
+      data$time <- as.POSIXct(as.character(data$time), origin = "1970-01-01")
+
+      colnames(data)[2] <- "banned_peers"
+
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~banned_peers, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "Number of active bans against peers")
+
+      fig <- fig |>
+        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time,
+          y = ~frollmean(banned_peers, 30 * 2, align = "center", na.rm = TRUE),
+          type = 'scatter', mode = 'lines',  fill = '', line = list(color = bs.colors["blue"], width = 3))
+
+      fig
+
+    })
+
+
+
+
+
     output$line_chart5 <- plotly::renderPlotly({
 
       data <- stressnet.db$process_info
 
       data$cpu_time_user <- c(NA, diff(data$cpu_time_user) / as.numeric(diff(data$time)))
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~cpu_time_user, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~cpu_time_user, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -257,7 +283,8 @@ server <- function(input, output) {
       fig <- plot.style(fig, "monerod's CPU load (user mode)")
 
       fig <- fig |>
-        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time, y = ~frollmean(cpu_time_user, 30 * 2, align = "center"),
+        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time,
+          y = ~frollmean(cpu_time_user, 30 * 2, align = "center", na.rm = TRUE),
           type = 'scatter', mode = 'lines',  fill = '', line = list(color = bs.colors["blue"], width = 3))
 
       fig
@@ -272,7 +299,7 @@ server <- function(input, output) {
 
       data$cpu_time_system <- c(NA, diff(data$cpu_time_system) / as.numeric(diff(data$time)))
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~cpu_time_system, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~cpu_time_system, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -280,7 +307,8 @@ server <- function(input, output) {
       fig <- plot.style(fig, "monerod's CPU load (kernel mode)")
 
       fig <- fig |>
-        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time, y = ~frollmean(cpu_time_system, 30 * 2, align = "center"),
+        plotly::add_trace(name = "30-minute moving average", data = data, x = ~time,
+          y = ~frollmean(cpu_time_system, 30 * 2, align = "center", na.rm = TRUE),
           type = 'scatter', mode = 'lines',  fill = '', line = list(color = bs.colors["blue"], width = 3))
 
       fig
@@ -292,7 +320,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$process_info
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~mem_uss, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~mem_uss, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -308,7 +336,7 @@ server <- function(input, output) {
 
       data <- stressnet.db$process_info
 
-      fig <- plotly::plot_ly(name = "Daily", data = data, x = ~time, y = ~mem_swap, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~mem_swap, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
@@ -318,6 +346,24 @@ server <- function(input, output) {
       fig
 
     })
+
+
+    output$line_chart9 <- plotly::renderPlotly({
+
+      data <- stressnet.db$pool_stats
+
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~rpc_response_time, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "Response time of get_transaction_pool_stats RPC call (seconds)")
+
+      fig
+
+    })
+
+
 
 
 
