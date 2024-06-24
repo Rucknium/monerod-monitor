@@ -24,7 +24,9 @@ ui <- fluidPage(
       shiny::textOutput("topline_text1"),
       shiny::textOutput("topline_text2"),
       shiny::textOutput("topline_text3"),
-      shiny::textOutput("topline_text4"))
+      shiny::textOutput("topline_text4"),
+      shiny::textOutput("topline_text5")
+    )
   ),
 
 

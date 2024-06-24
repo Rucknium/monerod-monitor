@@ -103,6 +103,13 @@ server <- function(input, output) {
       )
     })
 
+    output$topline_text5 <- renderText({
+      paste0("Node version: ", topline_data$version
+      )
+    })
+
+
+
 
     output$line_chart1 <- plotly::renderPlotly({
 
