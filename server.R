@@ -118,7 +118,11 @@ server <- function(input, output) {
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~bytes_total, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
+          yaxis = list(tickformat = "~s"))
+      # tickformat
+      # https://community.plotly.com/t/graphing-storage-in-units-of-1024-kilobytes-megabytes-etc/14305
+      # https://d3js.org/d3-format#locale_format
 
       fig <- plot.style(fig, "txpool bytes")
 
@@ -151,7 +155,8 @@ server <- function(input, output) {
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~block_weight, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"])) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
+          yaxis = list(tickformat = "~s"))
 
       fig <- plot.style(fig, "Block weight")
 
@@ -163,12 +168,12 @@ server <- function(input, output) {
 
       data <- stressnet.db$last_block_header
 
-      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~reward, type = 'scatter',
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~reward/1e+12, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"])) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
-      fig <- plot.style(fig, "Total block coinbase reward to miner")
+      fig <- plot.style(fig, "Total block coinbase reward to miner (XMR)")
 
       fig
 
@@ -181,7 +186,8 @@ server <- function(input, output) {
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~block_weight_median, type = 'scatter',
         mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"], width = 5)) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
+          yaxis = list(tickformat = "~s"))
 
       fig <- plot.style(fig, "Block weight median")
 
@@ -196,7 +202,8 @@ server <- function(input, output) {
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~database_size, type = 'scatter',
         mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"], width = 5)) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
+          yaxis = list(tickformat = "~s"))
 
       fig <- plot.style(fig, paste0("Blockchain size", ifelse(is.pruned, " (pruned)", " (unpruned")) )
 
@@ -330,7 +337,8 @@ server <- function(input, output) {
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~mem_uss, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
+          yaxis = list(tickformat = "~s"))
 
       fig <- plot.style(fig, "monerod's RAM (Unique Set Size)")
 
@@ -346,7 +354,8 @@ server <- function(input, output) {
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~mem_swap, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
         line = list(color = bs.colors["pink"]) ) |>
-        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
+          yaxis = list(tickformat = "~s"))
 
       fig <- plot.style(fig, "monerod's RAM (Swap)")
 
