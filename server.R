@@ -222,7 +222,7 @@ server <- function(input, output) {
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
-      fig <- plot.style(fig, "Number of outgoing connections")
+      fig <- plot.style(fig, "Number of outgoing peer node connections")
 
       fig
 
@@ -239,7 +239,7 @@ server <- function(input, output) {
         line = list(color = bs.colors["pink"]) ) |>
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
 
-      fig <- plot.style(fig, "Number of incoming connections")
+      fig <- plot.style(fig, "Number of incoming peer node connections")
 
       fig
 
@@ -279,6 +279,27 @@ server <- function(input, output) {
 
     })
 
+    output$line_chart4_2 <- plotly::renderPlotly({
+
+      data <- stressnet.db$connections
+
+      setDT(data)
+
+      data <- data[, .(live_time = median(live_time)), by = "time"]
+
+      fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~live_time/60, type = 'scatter',
+        mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
+        line = list(color = bs.colors["pink"]) ) |>
+        plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+      fig <- plot.style(fig, "Median live_time of peer node connections (minutes)")
+
+      fig
+
+    })
+
+
+
 
 
 
@@ -287,7 +308,8 @@ server <- function(input, output) {
 
       data <- stressnet.db$process_info
 
-      data$cpu_time_user <- c(NA, diff(data$cpu_time_user) / as.numeric(diff(data$time)))
+      data$cpu_time_user <- c(NA, diff(data$cpu_time_user)) / as.numeric(c(NA, diff(data$time)))
+      data$cpu_time_user <- ifelse(data$cpu_time_user >= 0, data$cpu_time_user, NA)
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~cpu_time_user, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -311,7 +333,8 @@ server <- function(input, output) {
 
       data <- stressnet.db$process_info
 
-      data$cpu_time_system <- c(NA, diff(data$cpu_time_system) / as.numeric(diff(data$time)))
+      data$cpu_time_system <- c(NA, diff(data$cpu_time_system)) / as.numeric(c(NA, diff(data$time)))
+      data$cpu_time_system <- ifelse(data$cpu_time_system >= 0, data$cpu_time_system, NA)
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~cpu_time_system, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -390,8 +413,12 @@ server <- function(input, output) {
 
       data.table::setDT(corr.data)
 
-      corr.data <- cor(corr.data[, .(txpool_bytes = bytes_total, diff_txpool_bytes = diff(bytes_total),
-        cpu_time_user, diff_mem_uss = diff(mem_uss))], use = "pairwise.complete.obs")
+      corr.data[, cpu_time_user := c(NA, diff(cpu_time_user)) / as.numeric(c(NA, diff(time)))]
+      corr.data[cpu_time_user < 0, cpu_time_user := NA]
+
+      corr.data <- cor(corr.data[, .(txpool_bytes = bytes_total, diff_txpool_bytes = c(NA, diff(bytes_total)),
+        cpu_time_user = cpu_time_user,
+        diff_mem_uss = c(NA, diff(mem_uss)))], use = "pairwise.complete.obs")
 
 
 

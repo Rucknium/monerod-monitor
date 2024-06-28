@@ -56,6 +56,8 @@ ui <- fluidPage(
   shiny::br(),
   plotly::plotlyOutput("line_chart4_1", height = "500px"),
   shiny::br(),
+  plotly::plotlyOutput("line_chart4_2", height = "500px"),
+  shiny::br(),
   plotly::plotlyOutput("line_chart5", height = "500px"),
   shiny::br(),
   plotly::plotlyOutput("line_chart6", height = "500px"),
