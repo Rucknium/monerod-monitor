@@ -330,7 +330,7 @@ while (TRUE) {
 
 
     process_info.statement <- DBI::dbSendQuery(con,
-      "INSERT INTO process_info VALUES (:time,:cpu_time_user,:cpu_time_system,:cpu_time_children_user,:cpu_time_children_system,:num_threads,:mem_rss,:mem_vms,:mem_shared,:mem_text,:mem_lib,:mem_data,:mem_dirty,:mem_uss,:mem_pss,:mem_swap)")
+      "INSERT INTO process_info VALUES (:time,:cpu_time_user,:cpu_time_system,:cpu_time_children_user,:cpu_time_children_system,:num_threads,:mem_rss,:mem_vms,:mem_shared,:mem_text,:mem_lib,:mem_data,:mem_dirty,:mem_maxrss,:mem_uss,:mem_pss,:mem_swap)")
     DBI::dbBind(process_info.statement, params = process_info)
     DBI::dbClearResult(process_info.statement)
 

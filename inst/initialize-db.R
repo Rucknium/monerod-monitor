@@ -175,6 +175,7 @@ mem_text REAL,
 mem_lib REAL,
 mem_data REAL,
 mem_dirty REAL,
+mem_maxrss REAL,
 mem_uss REAL,
 mem_pss REAL,
 mem_swap REAL
