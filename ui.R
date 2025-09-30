@@ -11,13 +11,13 @@ ui <- fluidPage(
   theme = bslib::bs_theme(preset = "vapor"), # https://bootswatch.com/vapor/
   shiny::fluidRow(
     shiny::column(5,
-      shiny::h5("Stressnet"),
+      shiny::h5("FCMP++ & Carrot alpha stressnet v1"),
       shiny::h6("Charts auto-update every 10 minutes."),
       shiny::h6("Data poll frequency: 30 seconds."),
 
       # shiny::h5(shiny::HTML("<u><a href=\"https://explorer.stressnet.net/\">Block Explorer</a></u>")),
-      shiny::h5(shiny::HTML("<u><a href=\"https://github.com/spackle-xmr/monero/\">Run a stressnet node</a></u>")),
-      shiny::h5(shiny::HTML("<u><a href=\"https://reddit.com/r/Monero/comments/1deyw1h/monero_stressnet_run_a_stressnet_node_to_improve/\">Stressnet announcement</a></u>")),
+      shiny::h5(shiny::HTML("<u><a href=\"https://github.com/seraphis-migration/monero/releases\">Run a stressnet node</a></u>")),
+      shiny::h5(shiny::HTML("<u><a href=\"https://monero.town/post/6763165/\">Stressnet announcement</a></u>")),
       shiny::h6(shiny::HTML("Source code of this webapp: <u><a href=\"https://github.com/Rucknium/monerod-monitor\">https://github.com/Rucknium/monerod-monitor</a></u>"))
     ),
     shiny::column(7,
