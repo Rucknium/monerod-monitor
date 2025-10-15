@@ -6,6 +6,9 @@ library(ggplot2)
 
 # thematic::thematic_shiny()
 
+shinyOptions(cache = cachem::cache_disk(file.path(dirname(tempdir()), "monerod-monitor-cache")),
+  max_size = 5 * 1024 * 1024^2) # Up to 5 GB cache
+
 con <- DBI::dbConnect(RSQLite::SQLite(), "data/xmr-stressnet-diagnostics.db")
 DBI::dbExecute(con, "PRAGMA journal_mode=WAL;")
 # export-csv.R can read while collect-archive.R writes
@@ -16,10 +19,10 @@ read.stressnet <- function(file = NULL) {
 
   list(
     pool_stats = DBI::dbGetQuery(con, "SELECT * FROM pool_stats"),
-    pool_stats_histo = DBI::dbGetQuery(con, "SELECT * FROM pool_stats_histo"),
+    # pool_stats_histo = DBI::dbGetQuery(con, "SELECT * FROM pool_stats_histo"), # pool_stats_hist is unused
     info = DBI::dbGetQuery(con, "SELECT * FROM info"),
     last_block_header = DBI::dbGetQuery(con, "SELECT * FROM last_block_header"),
-    fee_estimate = DBI::dbGetQuery(con, "SELECT * FROM fee_estimate"),
+    # fee_estimate = DBI::dbGetQuery(con, "SELECT * FROM fee_estimate"), # unused
     connections = DBI::dbGetQuery(con, "SELECT * FROM connections"),
     bans = DBI::dbGetQuery(con, "SELECT * FROM bans"),
     process_info = DBI::dbGetQuery(con, "SELECT * FROM process_info")
@@ -30,7 +33,7 @@ read.stressnet <- function(file = NULL) {
 # system.time(read.stressnet())
 
 
-stressnet.db_fn <- shiny::reactiveFileReader(10 * 60000, NULL,
+stressnet.db_fn <- shiny::reactiveFileReader(10 * 60000, session = NULL,
   filePath = paste0("data/xmr-stressnet-diagnostics.db-wal"), readFunc = read.stressnet)
 # Poll every 10 minutes
 
@@ -40,7 +43,7 @@ bs.colors <- bslib::bs_get_variables(bslib::bs_theme(preset = "vapor"),
     "teal", "cyan", "light", "dark", "body-bg", "white", "font-family-sans-serif", "text-muted",
     "gray-800", "gray-500"))
 
-is.pruned <- TRUE
+is.pruned <- FALSE
 # TODO: Make this not hard-coded
 
 plot.style <- function(x, title) {
@@ -62,6 +65,15 @@ plot.style <- function(x, title) {
   plotly::config(displayModeBar = FALSE)
 }
 
+ggplot.theme <- theme(
+  plot.background = element_rect(fill = bs.colors["dark"]),
+  panel.background = element_rect(fill = bs.colors["dark"]),
+  text = element_text(color = bs.colors["light"], size = 15),
+  axis.text = element_text(color = bs.colors["light"], size = 15),
+  plot.title = element_text(size = 25, hjust = 0.5),
+  axis.title.x = element_blank()
+)
+
 
 
 
@@ -71,19 +83,36 @@ server <- function(input, output) {
   # "If NULL, it is the same as calling onStop outside of the server function,
   # and the callback will be invoked when the application exits."
 
+  observeEvent(input$chart_type, {
+    updateTabsetPanel(inputId = "chart_switcher", selected = input$chart_type)
+  })
 
-  shiny::observe({
+
+
+
+  stressnet.db <- reactive({
 
     stressnet.db <- stressnet.db_fn()
 
-    for (i in seq_along(stressnet.db)) {
-      stressnet.db[[i]]$time <- as.POSIXct(as.numeric(stressnet.db[[i]]$time), origin = "1970-01-01")
-      stressnet.db[[i]] <- stressnet.db[[i]][stressnet.db[[i]]$time >= (as.POSIXct(Sys.time()) - as.numeric(input$recency)), , drop = FALSE]
+    recency <- as.numeric(input$recency)
+    if (input$chart_type == "javascript") {
+      recency <- 60*60
     }
 
+    for (i in seq_along(stressnet.db)) {
+      stressnet.db[[i]]$time <- as.POSIXct(as.numeric(stressnet.db[[i]]$time), origin = "1970-01-01")
+      stressnet.db[[i]] <- stressnet.db[[i]][stressnet.db[[i]]$time >=
+          (as.POSIXct(Sys.time()) - recency), , drop = FALSE]
+    }
+
+    stressnet.db
+
+  }) |> bindCache(stressnet.db_fn(), input$recency, input$chart_type)
 
 
-    topline_data <- stressnet.db$info[nrow(stressnet.db$info), , drop = FALSE]
+  observe({
+
+    topline_data <- stressnet.db()$info[nrow(stressnet.db()$info), , drop = FALSE]
 
     output$topline_text1 <- renderText({
       paste0("Data last updated: ", round(topline_data$time), " UTC")
@@ -108,12 +137,12 @@ server <- function(input, output) {
       )
     })
 
-
+})
 
 
     output$line_chart1 <- plotly::renderPlotly({
 
-      data <- stressnet.db$pool_stats
+      data <- stressnet.db()$pool_stats
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~bytes_total, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -128,14 +157,27 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
+    output$static_line_chart1 <- renderPlot({
+
+      data <- stressnet.db()$pool_stats
+
+      ggplot(data, aes(x = time, y = bytes_total)) +
+        ggtitle("txpool bytes") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        scale_y_continuous(labels = scales::label_number(suffix = " MB", scale = 1e-6)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+# , sizePolicy = function(width, height) {list(width = 800, height = 500)}
 
 
     output$line_chart2 <- plotly::renderPlotly({
 
-      data <- stressnet.db$pool_stats
+      data <- stressnet.db()$pool_stats
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~txs_total, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -146,11 +188,26 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+    output$static_line_chart2 <- shiny::renderPlot({
+
+      data <- stressnet.db()$pool_stats
+
+      ggplot(data, aes(x = time, y = txs_total)) +
+        ggtitle("txpool number of txs") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
 
     output$line_chart2_1_1 <- plotly::renderPlotly({
 
-      data <- stressnet.db$last_block_header
+      data <- stressnet.db()$last_block_header
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~block_weight, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -162,11 +219,24 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart2_1_1 <- shiny::renderPlot({
+
+      data <- stressnet.db()$last_block_header
+
+      ggplot(data, aes(x = time, y = block_weight)) +
+        ggtitle("Block weight") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        scale_y_continuous(labels = scales::label_number(suffix = " MB", scale = 1e-6)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
     output$line_chart2_1_2 <- plotly::renderPlotly({
 
-      data <- stressnet.db$last_block_header
+      data <- stressnet.db()$last_block_header
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~reward/1e+12, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -177,11 +247,24 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart2_1_2 <- shiny::renderPlot({
+
+      data <- stressnet.db()$last_block_header
+
+      ggplot(data, aes(x = time, y = reward/1e+12)) +
+        ggtitle("Total block coinbase reward to miner (XMR)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
 
     output$line_chart2_3 <- plotly::renderPlotly({
 
-      data <- stressnet.db$info
+      data <- stressnet.db()$info
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~block_weight_median, type = 'scatter',
         mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -193,11 +276,26 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart2_3 <- shiny::renderPlot({
+
+      data <- stressnet.db()$info
+
+      ggplot(data, aes(x = time, y = block_weight_median)) +
+        ggtitle("Block weight median") +
+        geom_line(linewidth = 2, color = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        scale_y_continuous(labels = scales::label_number(suffix = " MB", scale = 1e-6)) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+
 
     output$line_chart2_4 <- plotly::renderPlotly({
 
-      data <- stressnet.db$info
+      data <- stressnet.db()$info
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~database_size, type = 'scatter',
         mode = 'lines', # fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -205,17 +303,29 @@ server <- function(input, output) {
         plotly::layout(xaxis = list(rangeslider = list(visible = TRUE)),
           yaxis = list(tickformat = "~s"))
 
-      fig <- plot.style(fig, paste0("Blockchain size", ifelse(is.pruned, " (pruned)", " (unpruned")) )
+      fig <- plot.style(fig, paste0("Blockchain size", ifelse(is.pruned, " (pruned)", " (unpruned)")) )
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart2_4 <- shiny::renderPlot({
+
+      data <- stressnet.db()$info
+
+      ggplot(data, aes(x = time, y = database_size)) +
+        ggtitle(paste0("Blockchain size", ifelse(is.pruned, " (pruned)", " (unpruned)"))) +
+        geom_line(linewidth = 2, color = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        scale_y_continuous(labels = scales::label_number(suffix = " GB", scale = 1e-9)) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
 
     output$line_chart3 <- plotly::renderPlotly({
 
-      data <- stressnet.db$info
+      data <- stressnet.db()$info
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~outgoing_connections_count, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -226,13 +336,26 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+    output$static_line_chart3 <- shiny::renderPlot({
+
+      data <- stressnet.db()$info
+
+      ggplot(data, aes(x = time, y = outgoing_connections_count)) +
+        ggtitle("Number of outgoing peer node connections") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
 
     output$line_chart4 <- plotly::renderPlotly({
 
-      data <- stressnet.db$info
+      data <- stressnet.db()$info
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~incoming_connections_count, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -243,14 +366,26 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart4 <- shiny::renderPlot({
+
+      data <- stressnet.db()$info
+
+      ggplot(data, aes(x = time, y = incoming_connections_count)) +
+        ggtitle("Number of incoming peer node connections") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
 
 
     output$line_chart4_1 <- plotly::renderPlotly({
 
-      data <- stressnet.db$bans
+      data <- stressnet.db()$bans
 
       data$time <- factor(data$time)
 
@@ -277,11 +412,43 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+
+    output$static_line_chart4_1 <- shiny::renderPlot({
+
+      data <- stressnet.db()$bans
+
+      data$time <- factor(data$time)
+
+      data <- data[complete.cases(data), , drop = FALSE]
+      # Remove empty rows that have no bans, but keep the factor levels
+
+      data <- as.data.frame(table(data[, "time", drop = FALSE]))
+
+      data$time <- as.POSIXct(as.character(data$time), origin = "1970-01-01")
+
+      colnames(data)[2] <- "banned_peers"
+
+      ggplot(data, aes(x = time, y = banned_peers)) +
+        ggtitle("Number of active bans against peers") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+
+
+
+
+
 
     output$line_chart4_2 <- plotly::renderPlotly({
 
-      data <- stressnet.db$connections
+      data <- stressnet.db()$connections
 
       setDT(data)
 
@@ -296,7 +463,28 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+
+
+
+
+    output$static_line_chart4_2 <- shiny::renderPlot({
+
+      data <- stressnet.db()$connections
+
+      setDT(data)
+
+      data <- data[, .(live_time = median(live_time)), by = "time"]
+
+      ggplot(data, aes(x = time, y = live_time)) +
+        ggtitle("Median live_time of peer node connections (minutes)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
 
@@ -306,7 +494,7 @@ server <- function(input, output) {
 
     output$line_chart5 <- plotly::renderPlotly({
 
-      data <- stressnet.db$process_info
+      data <- stressnet.db()$process_info
 
       data$cpu_time_user <- c(NA, diff(data$cpu_time_user)) / as.numeric(c(NA, diff(data$time)))
       data$cpu_time_user <- ifelse(data$cpu_time_user >= 0, data$cpu_time_user, NA)
@@ -325,13 +513,30 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+
+    output$static_line_chart5 <- shiny::renderPlot({
+
+      data <- stressnet.db()$process_info
+
+      data$cpu_time_user <- c(NA, diff(data$cpu_time_user)) / as.numeric(c(NA, diff(data$time)))
+      data$cpu_time_user <- ifelse(data$cpu_time_user >= 0, data$cpu_time_user, NA)
+
+      ggplot(data, aes(x = time, y = cpu_time_user)) +
+        ggtitle("monerod's CPU load (user mode)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
 
     output$line_chart6 <- plotly::renderPlotly({
 
-      data <- stressnet.db$process_info
+      data <- stressnet.db()$process_info
 
       data$cpu_time_system <- c(NA, diff(data$cpu_time_system)) / as.numeric(c(NA, diff(data$time)))
       data$cpu_time_system <- ifelse(data$cpu_time_system >= 0, data$cpu_time_system, NA)
@@ -350,12 +555,29 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
+
+    output$static_line_chart6 <- shiny::renderPlot({
+
+      data <- stressnet.db()$process_info
+
+      data$cpu_time_system <- c(NA, diff(data$cpu_time_system)) / as.numeric(c(NA, diff(data$time)))
+      data$cpu_time_system <- ifelse(data$cpu_time_system >= 0, data$cpu_time_system, NA)
+
+      ggplot(data, aes(x = time, y = cpu_time_system)) +
+        ggtitle("monerod's CPU load (kernel mode)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
     output$line_chart7 <- plotly::renderPlotly({
 
-      data <- stressnet.db$process_info
+      data <- stressnet.db()$process_info
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~mem_uss, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -369,10 +591,23 @@ server <- function(input, output) {
 
     })
 
+    output$static_line_chart7 <- shiny::renderPlot({
+
+      data <- stressnet.db()$process_info
+
+      ggplot(data, aes(x = time, y = mem_uss)) +
+        ggtitle("monerod's RAM (Unique Set Size)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+
 
     output$line_chart8 <- plotly::renderPlotly({
 
-      data <- stressnet.db$process_info
+      data <- stressnet.db()$process_info
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~mem_swap, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -384,12 +619,24 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart8 <- shiny::renderPlot({
+
+      data <- stressnet.db()$process_info
+
+      ggplot(data, aes(x = time, y = mem_swap)) +
+        ggtitle("monerod's RAM (Swap)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
     output$line_chart9 <- plotly::renderPlotly({
 
-      data <- stressnet.db$pool_stats
+      data <- stressnet.db()$pool_stats
 
       fig <- plotly::plot_ly(name = "30 seconds poll time", data = data, x = ~time, y = ~rpc_response_time, type = 'scatter',
         mode = 'lines', fill = 'tozeroy', fillcolor = adjustcolor(bs.colors["pink"], alpha.f = 0.85),
@@ -400,7 +647,19 @@ server <- function(input, output) {
 
       fig
 
-    })
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
+
+    output$static_line_chart9 <- shiny::renderPlot({
+
+      data <- stressnet.db()$pool_stats
+
+      ggplot(data, aes(x = time, y = rpc_response_time)) +
+        ggtitle("Response time of get_transaction_pool_stats RPC call (seconds)") +
+        geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
+        expand_limits(y = 0) +
+        ggplot.theme
+
+    }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
 
 
 
@@ -409,7 +668,7 @@ server <- function(input, output) {
 
     output$corr_plot <- shiny::renderPlot({
 
-      corr.data <- data.table::merge.data.table(stressnet.db$pool_stats, stressnet.db$process_info, by = "time")
+      corr.data <- data.table::merge.data.table(stressnet.db()$pool_stats, stressnet.db()$process_info, by = "time")
 
       data.table::setDT(corr.data)
 
@@ -447,13 +706,15 @@ server <- function(input, output) {
 
 
 
-    }, height = 718, width = 800)
+    }, height = 718, width = 800) |> bindCache(stressnet.db(), input$recency, input$chart_type,
+      sizePolicy = sizeGrowthRatio(width = 800, height = 718, growthRate = 1)
+)
     # Height is strange because there is are white bars on top/bottom
     # or left/right otherwise
 
 
 
-}, domain = NULL)
+# }, domain = NULL)
 
 
 
