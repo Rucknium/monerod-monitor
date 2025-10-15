@@ -599,6 +599,7 @@ server <- function(input, output) {
         ggtitle("monerod's RAM (Unique Set Size)") +
         geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
         expand_limits(y = 0) +
+        scale_y_continuous(labels = scales::label_number(suffix = " GB", scale = 1e-9)) +
         ggplot.theme
 
     }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
@@ -629,6 +630,7 @@ server <- function(input, output) {
         ggtitle("monerod's RAM (Swap)") +
         geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
         expand_limits(y = 0) +
+        scale_y_continuous(labels = scales::label_number(suffix = " GB", scale = 1e-9)) +
         ggplot.theme
 
     }) |> bindCache(stressnet.db(), input$recency, input$chart_type)
