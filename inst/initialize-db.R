@@ -181,5 +181,6 @@ mem_pss REAL,
 mem_swap REAL
 )")
 
+message(Sys.time(), " Database initialization complete")
 
 

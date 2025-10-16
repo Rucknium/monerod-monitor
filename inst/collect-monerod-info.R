@@ -1,26 +1,34 @@
+#!/usr/bin/env Rscript
 
+# library(argparser)
 
+p <- argparser::arg_parser("collect-monerod-info")
 
-check.testnet.flags <- FALSE
+p <- argparser::add_argument(p, "--rpcmonerod", default = "http://127.0.0.1:28081",
+  help = "URL of unrestricted monerod RPC.")
+
+p <- argparser::add_argument(p, "--net", default = "testnet",
+  help = "'testnet' or 'mainnet'.")
+
+p <- argparser::add_argument(p, "--pidmonerod", default = NA,
+  help = "Process ID of monerod. Only necessary if multiple monerod instances on a given network (i.e. mainnet/testnet) are running.")
+
+p <- argparser::add_argument(p, "--collectioninterval", default = 30,
+  help = "Number of seconds to wait between data collection requests.")
+
+argv <- argparser::parse_args(p)
+
+url.rpc <- argv$rpcmonerod
+check.testnet.flags <- argv$net == "testnet"
+pid.monerod <- argv$pidmonerod
+poll.interval <- argv$collectioninterval
+# in seconds
 
 con <- DBI::dbConnect(RSQLite::SQLite(), "data/xmr-stressnet-diagnostics.db")
 DBI::dbExecute(con, "PRAGMA journal_mode=WAL;")
 # Can read while writing
 # https://stackoverflow.com/questions/15143871/simplest-way-to-retry-sqlite-query-if-db-is-locked
 
-
-script.args <- commandArgs(trailingOnly = TRUE)
-
-stopifnot(length(script.args) <= 1)
-
-if (length(script.args) == 1) {
-  url.rpc <- script.args
-} else {
-  url.rpc <- "http://127.0.0.1:28081"
-}
-
-poll.interval <- 30
-# in seconds
 
 # Modified from TownforgeR::tf_rpc_curl function
 xmr.rpc <- function(
@@ -119,7 +127,9 @@ while (TRUE) {
       colnames(histo) <- c("bytes", "txs")
       histo <- cbind(time = poll.time, histo_num = histo.names, as.data.frame(histo))
 
-      transaction_pool_stats$pool_stats$histo <- NULL
+      suppressWarnings(transaction_pool_stats$pool_stats$histo <- NULL)
+      # Occasionally, see this warning message:
+      # In transaction_pool_stats$pool_stats$histo <- NULL : Coercing LHS to a list
 
       list(pool_stats = cbind(time = poll.time, as.data.frame(transaction_pool_stats$pool_stats),
             rpc_response_time = rpc.response.time),
@@ -127,7 +137,13 @@ while (TRUE) {
 
     }
 
-    pool_stats <- get.pool_stats()
+    pool_stats <- tryCatch(get.pool_stats(), error = function(e) NULL)
+
+    if (length(pool_stats) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
     get.info <- function() {
@@ -138,7 +154,13 @@ while (TRUE) {
 
     }
 
-    info <- get.info()
+    info <- tryCatch(get.info(), error = function(e) NULL)
+
+    if (length(info) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
     get.last_block_header <- function() {
@@ -149,7 +171,13 @@ while (TRUE) {
 
     }
 
-    last_block_header <- get.last_block_header()
+    last_block_header <- tryCatch(get.last_block_header(), error = function(e) NULL)
+
+    if (length(last_block_header) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
     get.fee_estimate <- function() {
@@ -167,10 +195,16 @@ while (TRUE) {
 
 
 
-    fee_estimate <- get.fee_estimate()
+    fee_estimate <- tryCatch(get.fee_estimate(), error = function(e) NULL)
+
+    if (length(fee_estimate) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
-    get.connnnections <- function() {
+    get.connections <- function() {
 
       connections <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_connections")$result
 
@@ -195,7 +229,13 @@ while (TRUE) {
 
     }
 
-    connections <- get.connnnections()
+    connections <- tryCatch(get.connections(), error = function(e) NULL)
+
+    if (length(connections) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
 
@@ -217,52 +257,67 @@ while (TRUE) {
 
     }
 
-    bans <- get.bans()
+    bans <- tryCatch(get.bans(), error = function(e) NULL)
+
+    if (length(bans) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
 
     get.process_info <- function() {
 
-      processes <- ps::ps()
-
-      monerod.proc <- processes$ps_handle[processes$name %in% "monerod"]
-      # Rarely, "name" will be NA for some process. "%in%" instaed of "==" avoids problems
-      # when "name" is NA.
-
-      if (check.testnet.flags) {
-
+      if (! is.na(pid.monerod)) {
+        monerod.proc <- tryCatch(ps::ps_handle(pid = pid.monerod), error = function(e) NULL)
         if (length(monerod.proc) == 0) {
-          stop("No process called 'monerod' is running.")
+          stop("You supplied pid ", pid.monerod, " as the monerod pid. No process with that pid is running.")
+        }
+      } else {
+
+        processes <- ps::ps()
+
+        monerod.proc <- processes$ps_handle[processes$name %in% "monerod"]
+        # Rarely, "name" will be NA for some process. "%in%" instead of "==" avoids problems
+        # when "name" is NA.
+
+        if (check.testnet.flags) {
+
+          if (length(monerod.proc) == 0) {
+            stop("No process called 'monerod' is running.")
+          }
+
+          cmdline.flags <- lapply(monerod.proc, FUN = function(x) {
+            y <- ps::ps_cmdline(x)
+            data.frame(testnet = "--testnet" %in% y, non.default.p2p.port = any(grepl("--p2p-bind-port", y)))
+          })
+
+          cmdline.flags <- do.call(rbind, cmdline.flags)
+
+          monerod.proc <- monerod.proc[which(cmdline.flags$testnet)]
+
+          if (length(monerod.proc) == 0) {
+            stop("No 'monerod' process with '--testnet' is running.")
+          }
+
+          if (length(monerod.proc) > 1) {
+            monerod.proc <- monerod.proc[which(cmdline.flags$non.default.p2p.port)]
+          }
+          # If there are more than one testnet monerod processes running, at most
+          # one of them can have the default p2p port
+
+          if (length(monerod.proc) > 1) {
+            stop("More than one 'monerod' process with '--testnet' is running with non-default ports. Cannot determine the intended node process. Please specify the pid with --pidmonerod command line argument to collect-monerod-info.R")
+          }
+
         }
 
-        cmdline.flags <- lapply(monerod.proc, FUN = function(x) {
-          y <- ps::ps_cmdline(x)
-          data.frame(testnet = "--testnet" %in% y, non.default.p2p.port = any(grepl("--p2p-bind-port", y)))
-        })
-
-        cmdline.flags <- do.call(rbind, cmdline.flags)
-
-        monerod.proc <- monerod.proc[which(cmdline.flags$testnet)]
-
-        if (length(monerod.proc) == 0) {
-          stop("No 'monerod' process with '--testnet' is running.")
-        }
-
-        if (length(monerod.proc) > 1) {
-          monerod.proc <- monerod.proc[which(cmdline.flags$non.default.p2p.port)]
-        }
-        # If there are more than one testnet monerod processes running, at most
-        # one of them can have the default p2p port
-
-        if (length(monerod.proc) > 1) {
-          stop("More than one 'monerod' process with '--testnet' is running with non-default ports. Cannot determine the stressnet node process.")
-        }
+        stopifnot(length(monerod.proc) == 1)
+        # Can only have exactly one monerod process
+        monerod.proc <- monerod.proc[[1]]
 
       }
-
-      stopifnot(length(monerod.proc) == 1)
-      # Can only have exactly one monerod process
-      monerod.proc <- monerod.proc[[1]]
 
       cpu_times <- as.data.frame(as.list(ps::ps_cpu_times(monerod.proc)))
       colnames(cpu_times) <- paste0("cpu_time_", colnames(cpu_times))
@@ -278,7 +333,13 @@ while (TRUE) {
 
     }
 
-    process_info <- get.process_info()
+    process_info <- tryCatch(get.process_info(), error = function(e) NULL)
+
+    if (length(process_info) == 0) {
+      message(base::date(), " No connection to node. Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
 
 
 
@@ -336,10 +397,11 @@ while (TRUE) {
 
 
   }, gcFirst = FALSE)
-  # Do gcFirst = FALSE because gc() time would be not be counted in the compute.time
-  print(compute.time["elapsed"])
+  # Do gcFirst = FALSE because gc() time would not be counted in the compute.time
+  message(Sys.time(), " Data collection completed in ",
+    round(compute.time[["elapsed"]], 4), " seconds")
   Sys.sleep(max(c(0, poll.interval - compute.time["elapsed"])))
-  # Should poll once per second unless data processing takes more than poll.interval seconds. In
+  # Should poll once per poll.interval unless data processing takes more than poll.interval seconds. In
   # that case, polls as frequently as possible.
 }
 
