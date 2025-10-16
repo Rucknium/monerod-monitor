@@ -478,7 +478,7 @@ server <- function(input, output) {
 
       data <- data[, .(live_time = median(live_time)), by = "time"]
 
-      ggplot(data, aes(x = time, y = live_time)) +
+      ggplot(data, aes(x = time, y = live_time/60)) +
         ggtitle("Median live_time of peer node connections (minutes)") +
         geom_area(fill = adjustcolor(bs.colors["pink"], alpha.f = 0.85)) +
         expand_limits(y = 0) +

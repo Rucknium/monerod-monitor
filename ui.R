@@ -44,6 +44,8 @@ ui <- fluidPage(
   ),
   shiny::tabsetPanel(id = "chart_switcher", type = "hidden",
     tabPanelBody("static",
+      shiny::tabsetPanel(type = "pills",
+      tabPanel("txpool & blocksize",
       shiny::br(),
       shiny::plotOutput("static_line_chart1", height = "500px"),
       shiny::br(),
@@ -55,7 +57,9 @@ ui <- fluidPage(
       shiny::br(),
       shiny::plotOutput("static_line_chart2_3", height = "500px"),
       shiny::br(),
-      shiny::plotOutput("static_line_chart2_4", height = "500px"),
+      shiny::plotOutput("static_line_chart2_4", height = "500px")
+        ),
+        tabPanel("p2p connections",
       shiny::br(),
       shiny::plotOutput("static_line_chart3", height = "500px"),
       shiny::br(),
@@ -63,7 +67,9 @@ ui <- fluidPage(
       shiny::br(),
       shiny::plotOutput("static_line_chart4_1", height = "500px"),
       shiny::br(),
-      shiny::plotOutput("static_line_chart4_2", height = "500px"),
+      shiny::plotOutput("static_line_chart4_2", height = "500px")
+          ),
+        tabPanel("resource consumption",
       shiny::br(),
       shiny::plotOutput("static_line_chart5", height = "500px"),
       shiny::br(),
@@ -74,6 +80,8 @@ ui <- fluidPage(
       shiny::plotOutput("static_line_chart8", height = "500px"),
       shiny::br(),
       shiny::plotOutput("static_line_chart9", height = "500px")
+        )
+      )
       ),
     tabPanelBody("javascript",
       shiny::br(),
