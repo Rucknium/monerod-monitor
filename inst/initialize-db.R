@@ -1,4 +1,4 @@
-
+#!/usr/bin/env Rscript
 
 con <- DBI::dbConnect(RSQLite::SQLite(), "data/xmr-stressnet-diagnostics.db")
 DBI::dbExecute(con, "PRAGMA journal_mode=WAL;")

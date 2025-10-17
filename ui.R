@@ -5,9 +5,9 @@ library(shiny)
 # thematic::thematic_shiny()
 
 
-ui <- fluidPage(
+ui <- shiny::fluidPage(
 
-  titlePanel("monerod monitor"),
+  shiny::titlePanel("monerod monitor"),
   theme = bslib::bs_theme(preset = "vapor"), # https://bootswatch.com/vapor/
   shiny::fluidRow(
     shiny::column(5,
@@ -31,95 +31,101 @@ ui <- fluidPage(
 
 
 
-  radioButtons("recency",
+  shiny::radioButtons("recency",
     "Choose time window:",
     c("Hour" = 60*60, "Day" = 24*60*60, "Week" = 7*24*60*60, "All" = 365*24*60*60),
     inline = TRUE, width = "100%"
   ),
-  radioButtons("chart_type",
+  shiny::radioButtons("chart_type",
     "Chart type:",
     c("Static image (loads fast, but non-interactive)" = "static",
       "Javascript (loads slow, but with tooltips, and one hour time window only)" = "javascript"),
     inline = FALSE, width = "100%"
   ),
   shiny::tabsetPanel(id = "chart_switcher", type = "hidden",
-    tabPanelBody("static",
+    shiny::tabPanelBody("static",
       shiny::tabsetPanel(type = "pills",
-      tabPanel("txpool & blocksize",
-      shiny::br(),
-      shiny::plotOutput("static_line_chart1", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart2", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart2_1_1", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart2_1_2", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart2_3", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart2_4", height = "500px")
+        shiny::tabPanel("txpool & blocksize",
+          shiny::br(),
+          shiny::plotOutput("static_line_chart1", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart2", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart2_1_1", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart2_1_2", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart2_3", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart2_4", height = "500px")
         ),
-        tabPanel("p2p connections",
-      shiny::br(),
-      shiny::plotOutput("static_line_chart3", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart4", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart4_1", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart4_2", height = "500px")
-          ),
+        shiny::tabPanel("p2p connections",
+          shiny::br(),
+          shiny::plotOutput("static_line_chart3", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart4", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart4_1", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart4_2", height = "500px")
+        ),
         tabPanel("resource consumption",
-      shiny::br(),
-      shiny::plotOutput("static_line_chart5", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart6", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart7", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart8", height = "500px"),
-      shiny::br(),
-      shiny::plotOutput("static_line_chart9", height = "500px")
+          shiny::br(),
+          shiny::plotOutput("static_line_chart5", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart6", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart7", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart8", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("static_line_chart9", height = "500px")
         )
       )
-      ),
-    tabPanelBody("javascript",
-      shiny::br(),
-      plotly::plotlyOutput("line_chart1", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart2", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart2_1_1", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart2_1_2", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart2_3", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart2_4", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart3", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart4", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart4_1", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart4_2", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart5", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart6", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart7", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart8", height = "500px"),
-      shiny::br(),
-      plotly::plotlyOutput("line_chart9", height = "500px")
+    ),
+    shiny::tabPanelBody("javascript",
+      shiny::tabsetPanel(type = "pills",
+        shiny::tabPanel("txpool & blocksize",
+          shiny::br(),
+          shiny::plotOutput("line_chart1", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart2", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart2_1_1", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart2_1_2", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart2_3", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart2_4", height = "500px")
+        ),
+        shiny::tabPanel("p2p connections",
+          shiny::br(),
+          shiny::plotOutput("line_chart3", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart4", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart4_1", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart4_2", height = "500px")
+        ),
+        tabPanel("resource consumption",
+          shiny::br(),
+          shiny::plotOutput("line_chart5", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart6", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart7", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart8", height = "500px"),
+          shiny::br(),
+          shiny::plotOutput("line_chart9", height = "500px")
+        )
+      )
     )
   ),
   shiny::br(),
   shiny::plotOutput("corr_plot", height = "800px", width = "800px")
-
-
 
 )
 

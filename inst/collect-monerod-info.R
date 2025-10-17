@@ -1,7 +1,5 @@
 #!/usr/bin/env Rscript
 
-# library(argparser)
-
 p <- argparser::arg_parser("collect-monerod-info")
 
 p <- argparser::add_argument(p, "--rpcmonerod", default = "http://127.0.0.1:28081",
