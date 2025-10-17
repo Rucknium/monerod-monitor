@@ -21,7 +21,8 @@ Go into the `monerod-monitor` directory by inputting `cd monerod-monitor`. Then 
 ```R
 install.packages(c("argparser", "DBI", "RSQLite", "RJSONIO", 
   "RCurl", "ps", "shiny", "bslib", "cachem", "data.table",
-  "ggplot2", "scales", "plotly", "ggcorrplot"), Ncpus = 4)
+  "ggplot2", "scales", "plotly", "ggcorrplot", "httr",
+  "jsonlite"), Ncpus = 4)
 ```
 
 If you have greater or fewer than 4 threads available on your machine, you can adjust the `Ncpus` argument. On Linux, compilation of all the package dependencies may take some time. Close the R session after it is finished installing by inputting `quit(save = "no")`.
