@@ -177,6 +177,12 @@ while (TRUE) {
       next
     }
 
+    if (length(last_block_header$block_weight) == 0) {
+      message(base::date(), " block_weight missing from last_block_header query. (Usually indicates recently rebooted node). Retrying in ", poll.interval, " seconds.")
+      Sys.sleep(poll.interval)
+      next
+    }
+
 
     get.fee_estimate <- function() {
 
