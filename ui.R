@@ -11,7 +11,7 @@ ui <- shiny::fluidPage(
   theme = bslib::bs_theme(preset = "vapor"), # https://bootswatch.com/vapor/
   shiny::fluidRow(
     shiny::column(5,
-      shiny::h5("FCMP++ & Carrot alpha stressnet v1"),
+      shiny::h5("FCMP++ & Carrot beta stressnet v1"),
       shiny::h6("Charts auto-update every 10 minutes."),
       shiny::h6("Data poll frequency: 30 seconds."),
 

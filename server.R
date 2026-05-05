@@ -43,7 +43,7 @@ bs.colors <- bslib::bs_get_variables(bslib::bs_theme(preset = "vapor"),
     "teal", "cyan", "light", "dark", "body-bg", "white", "font-family-sans-serif", "text-muted",
     "gray-800", "gray-500"))
 
-is.pruned <- FALSE
+is.pruned <- TRUE
 # TODO: Make this not hard-coded
 
 plot.style <- function(x, title) {
