@@ -188,7 +188,7 @@ while (TRUE) {
 
       fee_estimate <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_fee_estimate")$result
 
-      fee_estimate.tiers <- fee_estimate$fees
+      fee_estimate.tiers <- fee_estimate$fees[1:4] # Only take the first 4. There may be 5 after FCMP fork
       fee_estimate$fees <- NULL
       fee_estimate.tiers <- as.data.frame(as.list(fee_estimate.tiers))
       colnames(fee_estimate.tiers) <- paste0("fee_tier_", 1:4)
