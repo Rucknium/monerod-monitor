@@ -247,7 +247,8 @@ while (TRUE) {
 
       bans <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_bans")$result
 
-      if (length(bans$bans) > 0) {
+      if ( ! is.atomic(bans) && length(bans$bans) > 0) {
+        # bans may be an atomic vector if there are no bans
 
         bans <- do.call(rbind, lapply(bans$bans, as.data.frame))
 
