@@ -382,12 +382,6 @@ while (TRUE) {
     DBI::dbClearResult(connections.statement)
 
 
-    connections.statement <- DBI::dbSendQuery(con,
-      "INSERT INTO connections VALUES (:time,:address,:address_type,:avg_download,:avg_upload,:connection_id,:current_download,:current_upload,:height,:host,:incoming,:ip,:live_time,:local_ip,:localhost,:peer_id,:port,:pruning_seed,:recv_count,:recv_idle_time,:rpc_credits_per_hash,:rpc_port,:send_count,:send_idle_time,:state,:support_flags)")
-    DBI::dbBind(connections.statement, params = connections)
-    DBI::dbClearResult(connections.statement)
-
-
     bans.statement <- DBI::dbSendQuery(con,
       "INSERT INTO bans VALUES (:time,:host,:ip,:seconds)")
     DBI::dbBind(bans.statement, params = bans)
